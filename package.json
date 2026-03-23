@@ -26,5 +26,8 @@
     "ts-node": "^10.9.2",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.5"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   }
 }
