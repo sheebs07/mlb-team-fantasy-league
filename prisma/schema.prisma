@@ -1,0 +1,43 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Owner {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  picks DraftPick[]
+}
+
+model MlbTeam {
+  id        Int         @id @default(autoincrement())
+  mlbId     Int         @unique
+  name      String
+  division  String
+  standings MlbStanding?
+  picks     DraftPick[]
+}
+
+model DraftPick {
+  id         Int     @id @default(autoincrement())
+  owner      Owner   @relation(fields: [ownerId], references: [id])
+  ownerId    Int
+  mlbTeam    MlbTeam @relation(fields: [mlbTeamId], references: [id])
+  mlbTeamId  Int
+  round      Int
+  pickNumber Int
+}
+
+model MlbStanding {
+  id        Int     @id @default(autoincrement())
+  mlbTeam   MlbTeam @relation(fields: [mlbTeamId], references: [id])
+  mlbTeamId Int     @unique
+  wins      Int
+  losses    Int
+  pct       Float
+  updatedAt DateTime @updatedAt
+}
