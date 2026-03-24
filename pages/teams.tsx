@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/prisma";
 
-type MlbTeam = {
+type Team = {
   id: number;
   name: string;
   division: string;
 };
 
 type TeamsPageProps = {
-  teams: MlbTeam[];
+  teams: Team[];
 };
 
 export async function getServerSideProps() {
@@ -16,23 +16,29 @@ export async function getServerSideProps() {
   });
 
   return {
-    props: {
-      teams
-    }
+    props: { teams }
   };
 }
 
 export default function TeamsPage({ teams }: TeamsPageProps) {
   return (
     <div>
-      <h2>MLB Teams</h2>
-      <ul>
-        {teams.map(t => (
-          <li key={t.id}>
-            {t.name} – {t.division}
-          </li>
+      <h1 style={{ marginBottom: "20px" }}>MLB Teams</h1>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+          gap: "16px"
+        }}
+      >
+        {teams.map((team) => (
+          <div className="card" key={team.id}>
+            <h2 style={{ marginBottom: "8px" }}>{team.name}</h2>
+            <p style={{ color: "#555" }}>{team.division}</p>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
