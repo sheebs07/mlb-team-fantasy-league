@@ -1,10 +1,137 @@
-html, body {
+/* ------------------------------ */
+/* Global Reset + Base Styles     */
+/* ------------------------------ */
+
+* {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
+
+html, body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  background: #f5f5f5;
+  color: #222;
+  min-height: 100%;
+}
+
+/* Improve text rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ------------------------------ */
+/* Layout                         */
+/* ------------------------------ */
+
+main {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ------------------------------ */
+/* Navbar                         */
+/* ------------------------------ */
+
+.navbar {
+  display: flex;
+  gap: 20px;
+  padding: 12px 20px;
+  background: #0d1117;
+  border-bottom: 1px solid #30363d;
+}
+
+.navbar a {
+  color: #c9d1d9;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.navbar a:hover {
+  color: #58a6ff;
+}
+
+/* ------------------------------ */
+/* Tables                         */
+/* ------------------------------ */
+
 table {
-  font-size: 14px;
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
 }
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+th {
+  background: #f0f0f0;
+  text-align: left;
+  font-weight: 600;
+}
+
+tr:hover {
+  background: #fafafa;
+}
+
+/* ------------------------------ */
+/* Cards                          */
+/* ------------------------------ */
+
+.card {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  margin-bottom: 16px;
+}
+
+/* ------------------------------ */
+/* Draft UI Helpers               */
+/* ------------------------------ */
+
+.current-pick {
+  background: #fff3cd;
+  border-left: 4px solid #ffca2c;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+}
+
+.picked {
+  opacity: 0.5;
+}
+
+/* ------------------------------ */
+/* Buttons                        */
+/* ------------------------------ */
+
 button {
-  font-size: 14px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  background: #0366d6;
+  color: white;
+  transition: background 0.15s ease;
+}
+
+button:hover {
+  background: #0256b3;
+}
+
+button:disabled {
+  background: #9bbce0;
+  cursor: not-allowed;
 }
