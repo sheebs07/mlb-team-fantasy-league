@@ -93,6 +93,15 @@ tr:hover {
   border-radius: 8px;
   border: 1px solid #ddd;
   margin-bottom: 16px;
+
+  /* NEW FIXES */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+
+  /* Prevent button text collapsing */
+  text-align: left;
 }
 
 /* ------------------------------ */
