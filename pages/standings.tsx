@@ -1,4 +1,6 @@
-import { useState } from "react";
+"use client";
+
+import { useEffect, useState } from "react";
 import { prisma } from "@/lib/prisma";
 
 type OwnerRow = {
@@ -78,21 +80,25 @@ export async function getServerSideProps() {
 
   return {
     props: {
-      rows,
-      lastUpdated: new Date().toLocaleString()
+      rows
     }
   };
 }
 
-export default function StandingsPage({
-  rows,
-  lastUpdated
-}: {
-  rows: OwnerRow[];
-  lastUpdated: string;
-}) {
+export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
   const [open, setOpen] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(false);
+
+  // ⭐ Local timestamp stored in browser only
+  const [localTime, setLocalTime] = useState("");
+
+  // Load saved timestamp on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("lastRefresh");
+    if (saved) {
+      setLocalTime(new Date(saved).toLocaleString());
+    }
+  }, []);
 
   const logo = (mlbId: number) => `/logos/${mlbId}.png`;
 
@@ -102,6 +108,12 @@ export default function StandingsPage({
   const refreshData = async () => {
     setLoading(true);
     await fetch("/api/mlb-sync", { method: "POST" });
+
+    // ⭐ Save timestamp to localStorage
+    const now = new Date().toISOString();
+    localStorage.setItem("lastRefresh", now);
+    setLocalTime(new Date(now).toLocaleString());
+
     window.location.reload();
   };
 
@@ -133,7 +145,7 @@ export default function StandingsPage({
           </button>
 
           <div style={{ fontSize: "13px", color: "#666" }}>
-            Last Data Refresh: {new Date(lastUpdated).toLocaleString()}
+            Last Data Refresh: {localTime || "—"}
           </div>
         </div>
       </div>
@@ -166,7 +178,6 @@ export default function StandingsPage({
         <tbody>
           {rows.map((owner) => (
             <>
-              {/* OWNER SUMMARY ROW */}
               <tr
                 key={owner.ownerId}
                 onClick={() => toggle(owner.ownerId)}
@@ -187,7 +198,6 @@ export default function StandingsPage({
                 <td style={{ textAlign: "right" }}>{owner.pct.toFixed(3)}</td>
               </tr>
 
-              {/* COLLAPSIBLE TEAM ROWS */}
               {open[owner.ownerId] &&
                 owner.teams.map((team) => (
                   <tr key={team.mlbId}>
