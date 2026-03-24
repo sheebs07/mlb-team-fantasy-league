@@ -51,14 +51,15 @@ export async function getServerSideProps() {
     };
   });
 
-  rows.sort((a, b) => b.pct - a.pct);
+  // Sort by win %, then wins
+  rows.sort((a, b) => b.pct - a.pct || b.wins - a.wins);
 
   return { props: { rows } };
 }
 
 export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
-  const logo = (mlbId: number) => `/logos/${mlbId}.png`;
   const [open, setOpen] = useState<Record<number, boolean>>({});
+  const logo = (mlbId: number) => `/logos/${mlbId}.png`;
 
   const toggle = (ownerId: number) =>
     setOpen((prev) => ({ ...prev, [ownerId]: !prev[ownerId] }));
@@ -92,7 +93,7 @@ export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
         </thead>
 
         <tbody>
-          {rows.map((owner) => (
+          {rows.map((owner, index) => (
             <>
               {/* OWNER SUMMARY ROW */}
               <tr
@@ -103,24 +104,30 @@ export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
                   background: "#f7f7f7"
                 }}
               >
-                <td style={{ padding: "8px 0" }}>
-                  {owner.ownerName}
+                <td style={{ padding: "8px 0", fontWeight: 700 }}>
+                  {index + 1}. {owner.ownerName}
                   <span style={{ marginLeft: "8px", color: "#888" }}>
                     {open[owner.ownerId] ? "▲" : "▼"}
                   </span>
                 </td>
+
                 <td style={{ textAlign: "right" }}>{owner.wins}</td>
                 <td style={{ textAlign: "right" }}>{owner.losses}</td>
-                <td style={{ textAlign: "right" }}>
-                  {owner.pct.toFixed(3)}
-                </td>
+                <td style={{ textAlign: "right" }}>{owner.pct.toFixed(3)}</td>
               </tr>
 
               {/* COLLAPSIBLE TEAM ROWS */}
               {open[owner.ownerId] &&
                 owner.teams.map((team) => (
                   <tr key={team.mlbId}>
-                    <td style={{ padding: "6px 0 6px 20px", display: "flex", alignItems: "center", gap: "10px" }}>
+                    <td
+                      style={{
+                        padding: "6px 0 6px 20px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px"
+                      }}
+                    >
                       <img
                         src={logo(team.mlbId)}
                         alt={team.name}
@@ -132,6 +139,7 @@ export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
                       />
                       {team.name}
                     </td>
+
                     <td style={{ textAlign: "right" }}>{team.wins}</td>
                     <td style={{ textAlign: "right" }}>{team.losses}</td>
                     <td style={{ textAlign: "right" }}>
