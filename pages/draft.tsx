@@ -1,5 +1,30 @@
 import { prisma } from "@/lib/prisma";
-import DraftClient from "@/app/draft/DraftClient"; // keep your client component
+import DraftClient from "@/app/draft/DraftClient";
+
+type Owner = {
+  id: number;
+  name: string;
+};
+
+type Team = {
+  id: number;
+  name: string;
+  division: string;
+};
+
+type Pick = {
+  id: number;
+  pickNumber: number;
+  round: number;
+  owner: Owner;
+  mlbTeam: Team;
+};
+
+type DraftPageProps = {
+  owners: Owner[];
+  teams: Team[];
+  picks: Pick[];
+};
 
 export async function getServerSideProps() {
   const owners = await prisma.owner.findMany();
@@ -17,6 +42,6 @@ export async function getServerSideProps() {
   };
 }
 
-export default function DraftPage({ owners, teams, picks }) {
+export default function DraftPage({ owners, teams, picks }: DraftPageProps) {
   return <DraftClient owners={owners} teams={teams} picks={picks} />;
 }
