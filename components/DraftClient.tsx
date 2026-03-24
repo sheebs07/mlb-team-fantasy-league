@@ -99,14 +99,20 @@ export default function DraftClient({
               disabled={loading}
               className="card"
               style={{
-                display: "block",
-                textAlign: "left",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: "4px",
                 cursor: "pointer",
                 background: "white"
               }}
             >
-              <div style={{ fontWeight: 600 }}>{team.name}</div>
-              <div style={{ color: "#666", fontSize: "14px" }}>{team.division}</div>
+              <span style={{ fontWeight: 600, fontSize: "16px" }}>
+                {team.name}
+              </span>
+              <span style={{ color: "#666", fontSize: "14px" }}>
+                {team.division}
+              </span>
             </button>
           ))}
       </div>
