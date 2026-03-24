@@ -26,7 +26,7 @@ export async function getServerSideProps() {
     }
   });
 
-  const rows: Row[] = owners.map(o => {
+  const rows: Row[] = owners.map((o) => {
     const wins = o.picks.reduce(
       (sum, p) => sum + (p.mlbTeam.standings?.wins ?? 0),
       0
@@ -44,41 +44,41 @@ export async function getServerSideProps() {
       wins,
       losses,
       pct,
-      teams: o.picks.map(p => p.mlbTeam.name)
+      teams: o.picks.map((p) => p.mlbTeam.name)
     };
   });
 
   rows.sort((a, b) => b.wins - a.wins || b.pct - a.pct);
 
   return {
-    props: {
-      rows
-    }
+    props: { rows }
   };
 }
 
 export default function StandingsPage({ rows }: StandingsPageProps) {
   return (
     <div>
-      <h2>League Standings</h2>
-      <table style={{ borderCollapse: "collapse", width: "100%" }}>
+      <h1 style={{ marginBottom: "20px" }}>League Standings</h1>
+
+      <table>
         <thead>
           <tr>
-            <th style={{ borderBottom: "1px solid #ccc", textAlign: "left" }}>Owner</th>
-            <th style={{ borderBottom: "1px solid #ccc", textAlign: "right" }}>Wins</th>
-            <th style={{ borderBottom: "1px solid #ccc", textAlign: "right" }}>Losses</th>
-            <th style={{ borderBottom: "1px solid #ccc", textAlign: "right" }}>Win %</th>
-            <th style={{ borderBottom: "1px solid #ccc", textAlign: "left" }}>Teams</th>
+            <th>Owner</th>
+            <th>Wins</th>
+            <th>Losses</th>
+            <th>Win %</th>
+            <th>Teams</th>
           </tr>
         </thead>
+
         <tbody>
-          {rows.map(r => (
+          {rows.map((r) => (
             <tr key={r.ownerId}>
-              <td style={{ padding: "4px 0" }}>{r.ownerName}</td>
-              <td style={{ padding: "4px 0", textAlign: "right" }}>{r.wins}</td>
-              <td style={{ padding: "4px 0", textAlign: "right" }}>{r.losses}</td>
-              <td style={{ padding: "4px 0", textAlign: "right" }}>{r.pct.toFixed(3)}</td>
-              <td style={{ padding: "4px 0" }}>{r.teams.join(", ")}</td>
+              <td>{r.ownerName}</td>
+              <td>{r.wins}</td>
+              <td>{r.losses}</td>
+              <td>{r.pct.toFixed(3)}</td>
+              <td>{r.teams.join(", ")}</td>
             </tr>
           ))}
         </tbody>
