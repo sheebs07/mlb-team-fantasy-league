@@ -8,7 +8,7 @@ export default async function handler(req: any, res: any) {
   const picks = await prisma.draftPick.findMany();
 
   const rounds = 5;
-  const snakeOrder = [];
+  const snakeOrder: number[] = [];
 
   for (let round = 1; round <= rounds; round++) {
     const forward = round % 2 === 1;

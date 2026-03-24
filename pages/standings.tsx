@@ -48,7 +48,7 @@ export async function getServerSideProps() {
       wins,
       losses,
       pct,
-      rank: 0, // temp, will be set below
+      rank: 0,
       teams
     };
   });
@@ -56,9 +56,8 @@ export async function getServerSideProps() {
   // Sort by win %, then wins
   rows.sort((a, b) => b.pct - a.pct || b.wins - a.wins);
 
-  // Handle empty case
+  // Dense ranking
   if (rows.length > 0) {
-    // Dense ranking: ties share rank, next rank increments by 1
     let currentRank = 1;
     rows[0].rank = 1;
 
@@ -71,28 +70,75 @@ export async function getServerSideProps() {
         prev.losses === curr.losses &&
         prev.pct === curr.pct;
 
-      if (!sameRecord) {
-        currentRank += 1;
-      }
+      if (!sameRecord) currentRank += 1;
 
       curr.rank = currentRank;
     }
   }
 
-  return { props: { rows } };
+  return {
+    props: {
+      rows,
+      lastUpdated: new Date().toLocaleString()
+    }
+  };
 }
 
-export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
+export default function StandingsPage({
+  rows,
+  lastUpdated
+}: {
+  rows: OwnerRow[];
+  lastUpdated: string;
+}) {
   const [open, setOpen] = useState<Record<number, boolean>>({});
+  const [loading, setLoading] = useState(false);
+
   const logo = (mlbId: number) => `/logos/${mlbId}.png`;
 
   const toggle = (ownerId: number) =>
     setOpen((prev) => ({ ...prev, [ownerId]: !prev[ownerId] }));
 
+  const refreshData = async () => {
+    setLoading(true);
+    await fetch("/api/mlb-sync", { method: "POST" });
+    window.location.reload();
+  };
+
   return (
     <div>
-      <h1 style={{ marginBottom: "20px" }}>League Standings</h1>
+      {/* HEADER WITH RIGHT-ALIGNED BUTTON */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "20px"
+        }}
+      >
+        <h1>League Standings</h1>
 
+        <div style={{ textAlign: "right" }}>
+          <button
+            onClick={refreshData}
+            disabled={loading}
+            style={{
+              padding: "8px 14px",
+              cursor: "pointer",
+              fontSize: "14px",
+              marginBottom: "6px"
+            }}
+          >
+            {loading ? "Refreshing…" : "Refresh Data"}
+          </button>
+
+          <div style={{ fontSize: "13px", color: "#666" }}>
+            Last Data Refresh: {lastUpdated}
+          </div>
+        </div>
+      </div>
+
+      {/* STANDINGS TABLE */}
       <table
         style={{
           width: "100%",
