@@ -1,7 +1,8 @@
+import type { AppProps } from "next/app";
 import Link from "next/link";
-import "../app/globals.css"; // keep your global styles
+import "../app/globals.css";
 
-export default function MyApp({ Component, pageProps }) {
+export default function MyApp({ Component, pageProps }: AppProps) {
   return (
     <div>
       <nav style={{ padding: "10px", borderBottom: "1px solid #ccc" }}>
