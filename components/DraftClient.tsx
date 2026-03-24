@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Owner = { id: number; name: string };
-type MlbTeam = { id: number; name: string; division: string };
+type MlbTeam = { id: number; name: string; division: string; mlbId: number };
 type DraftPick = {
   id: number;
   owner: Owner;
@@ -25,9 +25,12 @@ export default function DraftClient({
   const [loading, setLoading] = useState(false);
   const rounds = 5;
 
-  const takenTeamIds = new Set(picks.map((p) => p.mlbTeam.id));
+  const takenTeamIds = new Set(picks.map((p) => p.mlbTeam.mlbId));
   const totalPicks = owners.length * rounds;
   const currentPickNumber = picks.length + 1;
+
+  // Logo helper — loads /public/logos/<mlbId>.png
+  const getLogoUrl = (team: MlbTeam) => `/logos/${team.mlbId}.png`;
 
   const handlePick = async (teamId: number) => {
     setLoading(true);
@@ -86,38 +89,53 @@ export default function DraftClient({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
           gap: "12px"
         }}
       >
         {teams
-          .filter((t) => !takenTeamIds.has(t.id))
+          .filter((t) => !takenTeamIds.has(t.mlbId))
           .map((team) => (
             <div
-              key={team.id}
+              key={team.mlbId}
               className="card"
               style={{
                 display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
+                flexDirection: "row",
+                alignItems: "center",
                 padding: "12px",
-                gap: "10px",
+                gap: "12px",
                 background: "white"
               }}
             >
-              <div style={{ fontWeight: 600, fontSize: "14px" }}>
-                {team.name}
+              {/* Team Logo */}
+              <img
+                src={getLogoUrl(team)}
+                alt={team.name}
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  objectFit: "contain"
+                }}
+              />
+
+              {/* Team Info */}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ fontWeight: 600, fontSize: "15px" }}>
+                  {team.name}
+                </div>
+
+                <div style={{ color: "#666", fontSize: "13px" }}>
+                  {team.division}
+                </div>
               </div>
 
-              <div style={{ color: "#666", fontSize: "13px" }}>
-                {team.division}
-              </div>
-
+              {/* Draft Button */}
               <button
-                onClick={() => handlePick(team.id)}
+                onClick={() => handlePick(team.mlbId)}
                 disabled={loading}
                 style={{
-                  marginTop: "8px",
+                  marginLeft: "auto",
                   padding: "6px 10px",
                   fontSize: "14px",
                   cursor: "pointer"

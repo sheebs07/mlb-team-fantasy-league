@@ -43,6 +43,7 @@ async function main() {
     { mlbId: 121, name: "New York Mets", division: "NL East" },
     { mlbId: 147, name: "New York Yankees", division: "AL East" },
     { mlbId: 133, name: "Oakland Athletics", division: "AL West" },
+    { mlbId: 143, name: "Philadelphia Phillies", division: "NL East" },
     { mlbId: 134, name: "Pittsburgh Pirates", division: "NL Central" },
     { mlbId: 135, name: "San Diego Padres", division: "NL West" },
     { mlbId: 137, name: "San Francisco Giants", division: "NL West" },
@@ -51,7 +52,7 @@ async function main() {
     { mlbId: 139, name: "Tampa Bay Rays", division: "AL East" },
     { mlbId: 140, name: "Texas Rangers", division: "AL West" },
     { mlbId: 141, name: "Toronto Blue Jays", division: "AL East" },
-    { mlbId: 143, name: "Washington Nationals", division: "NL East" }
+    { mlbId: 120, name: "Washington Nationals", division: "NL East" }
   ];
 
   for (const t of teams) {

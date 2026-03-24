@@ -10,6 +10,7 @@ type Team = {
   id: number;
   name: string;
   division: string;
+  mlbId: number; // ⭐ Added
 };
 
 type Pick = {
@@ -28,9 +29,23 @@ type DraftPageProps = {
 
 export async function getServerSideProps() {
   const owners = await prisma.owner.findMany();
-  const teams = await prisma.mlbTeam.findMany();
+
+  // ⭐ Updated to include mlbId
+  const teams = await prisma.mlbTeam.findMany({
+    select: {
+      id: true,
+      name: true,
+      division: true,
+      mlbId: true
+    },
+    orderBy: { name: "asc" }
+  });
+
   const picks = await prisma.draftPick.findMany({
-    include: { owner: true, mlbTeam: true },
+    include: {
+      owner: true,
+      mlbTeam: true // includes mlbId automatically
+    },
     orderBy: { pickNumber: "asc" }
   });
 
