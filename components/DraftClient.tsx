@@ -102,15 +102,17 @@ export default function DraftClient({
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "flex-start",
-                gap: "4px",
+                padding: "12px",
+                gap: "10px",
                 cursor: "pointer",
                 background: "white"
               }}
             >
-              <span style={{ fontWeight: 600, fontSize: "16px" }}>
+              <span style={{ fontWeight: 600, fontSize: "14px", lineHeight: "1.2" }}>
                 {team.name}
               </span>
-              <span style={{ color: "#666", fontSize: "14px" }}>
+
+              <span style={{ color: "#666", fontSize: "13px", marginTop: "4px" }}>
                 {team.division}
               </span>
             </button>
