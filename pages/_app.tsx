@@ -7,10 +7,10 @@ export default function MyApp({ Component, pageProps }: AppProps) {
     <div>
       <nav className="navbar">
         <Link href="/">Home</Link>
-        <Link href="/draft">Draft</Link>
         <Link href="/standings">Standings</Link>
         <Link href="/owners">Owners</Link>
         <Link href="/teams">Teams</Link>
+        <Link href="/draft">Draft</Link>
         <Link href="/commissioner">Commissioner</Link>
       </nav>
 
