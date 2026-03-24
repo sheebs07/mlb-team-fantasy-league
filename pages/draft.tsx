@@ -30,7 +30,8 @@ export async function getServerSideProps() {
   const owners = await prisma.owner.findMany();
   const teams = await prisma.mlbTeam.findMany();
   const picks = await prisma.draftPick.findMany({
-    include: { owner: true, mlbTeam: true }
+    include: { owner: true, mlbTeam: true },
+    orderBy: { pickNumber: "asc" }
   });
 
   return {
@@ -43,5 +44,11 @@ export async function getServerSideProps() {
 }
 
 export default function DraftPage({ owners, teams, picks }: DraftPageProps) {
-  return <DraftClient owners={owners} teams={teams} picks={picks} />;
+  return (
+    <div>
+      <h1 style={{ marginBottom: "20px" }}>Live Draft</h1>
+
+      <DraftClient owners={owners} teams={teams} picks={picks} />
+    </div>
+  );
 }
