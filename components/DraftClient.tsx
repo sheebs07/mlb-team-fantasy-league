@@ -25,7 +25,7 @@ export default function DraftClient({
   const [loading, setLoading] = useState(false);
   const rounds = 5;
 
-  const takenTeamIds = new Set(picks.map(p => p.mlbTeam.id));
+  const takenTeamIds = new Set(picks.map((p) => p.mlbTeam.id));
   const totalPicks = owners.length * rounds;
   const currentPickNumber = picks.length + 1;
 
@@ -45,39 +45,67 @@ export default function DraftClient({
     }
 
     const pick = await res.json();
-    setPicks(prev => [...prev, pick]);
+    setPicks((prev) => [...prev, pick]);
   };
 
   return (
     <div>
-      <h2>Snake Draft</h2>
-      <p>
-        Pick {currentPickNumber} of {totalPicks}
-      </p>
+      {/* Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <h2 style={{ marginBottom: "6px" }}>Snake Draft</h2>
+        <p style={{ color: "#555" }}>
+          Pick {currentPickNumber} of {totalPicks}
+        </p>
+      </div>
 
-      <h3>Drafted so far</h3>
-      <ol>
-        {picks.map(p => (
-          <li key={p.id}>
-            #{p.pickNumber} – <strong>{p.owner.name}</strong> →{" "}
-            {p.mlbTeam.name} (Round {p.round})
-          </li>
-        ))}
-      </ol>
+      {/* Draft Board */}
+      <h3 style={{ marginBottom: "10px" }}>Draft Board</h3>
+      <div style={{ marginBottom: "20px" }}>
+        {picks.length === 0 && (
+          <p style={{ color: "#666" }}>No picks yet — draft is starting.</p>
+        )}
 
-      <h3>Available Teams</h3>
-      {loading && <p>Submitting pick...</p>}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <ol style={{ paddingLeft: "20px" }}>
+          {picks.map((p) => (
+            <li
+              key={p.id}
+              className={p.pickNumber === currentPickNumber - 1 ? "current-pick" : ""}
+              style={{ marginBottom: "6px" }}
+            >
+              #{p.pickNumber} — <strong>{p.owner.name}</strong> → {p.mlbTeam.name}{" "}
+              <span style={{ color: "#777" }}>(Round {p.round})</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Available Teams */}
+      <h3 style={{ marginBottom: "10px" }}>Available Teams</h3>
+      {loading && <p style={{ color: "#777" }}>Submitting pick…</p>}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+          gap: "12px"
+        }}
+      >
         {teams
-          .filter(t => !takenTeamIds.has(t.id))
-          .map(team => (
+          .filter((t) => !takenTeamIds.has(t.id))
+          .map((team) => (
             <button
               key={team.id}
               onClick={() => handlePick(team.id)}
               disabled={loading}
-              style={{ padding: 8, border: "1px solid #ccc", cursor: "pointer" }}
+              className="card"
+              style={{
+                textAlign: "left",
+                cursor: "pointer",
+                background: "white"
+              }}
             >
-              {team.name} ({team.division})
+              <div style={{ fontWeight: 600 }}>{team.name}</div>
+              <div style={{ color: "#666", fontSize: "14px" }}>{team.division}</div>
             </button>
           ))}
       </div>
