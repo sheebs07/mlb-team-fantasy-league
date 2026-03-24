@@ -7,6 +7,7 @@ type OwnerRow = {
   wins: number;
   losses: number;
   pct: number;
+  rank: number;
   teams: {
     mlbId: number;
     name: string;
@@ -47,12 +48,36 @@ export async function getServerSideProps() {
       wins,
       losses,
       pct,
+      rank: 0, // temp, will be set below
       teams
     };
   });
 
   // Sort by win %, then wins
   rows.sort((a, b) => b.pct - a.pct || b.wins - a.wins);
+
+  // Handle empty case
+  if (rows.length > 0) {
+    // Dense ranking: ties share rank, next rank increments by 1
+    let currentRank = 1;
+    rows[0].rank = 1;
+
+    for (let i = 1; i < rows.length; i++) {
+      const prev = rows[i - 1];
+      const curr = rows[i];
+
+      const sameRecord =
+        prev.wins === curr.wins &&
+        prev.losses === curr.losses &&
+        prev.pct === curr.pct;
+
+      if (!sameRecord) {
+        currentRank += 1;
+      }
+
+      curr.rank = currentRank;
+    }
+  }
 
   return { props: { rows } };
 }
@@ -93,7 +118,7 @@ export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
         </thead>
 
         <tbody>
-          {rows.map((owner, index) => (
+          {rows.map((owner) => (
             <>
               {/* OWNER SUMMARY ROW */}
               <tr
@@ -105,7 +130,7 @@ export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
                 }}
               >
                 <td style={{ padding: "8px 0", fontWeight: 700 }}>
-                  {index + 1}. {owner.ownerName}
+                  {owner.rank}. {owner.ownerName}
                   <span style={{ marginLeft: "8px", color: "#888" }}>
                     {open[owner.ownerId] ? "▲" : "▼"}
                   </span>
