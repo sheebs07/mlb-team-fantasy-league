@@ -8,9 +8,10 @@ generator client {
 }
 
 model Owner {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  picks DraftPick[]
+  id        Int        @id @default(autoincrement())
+  name      String
+  draftSlot Int        @default(1)
+  picks     DraftPick[]
 }
 
 model MlbTeam {
