@@ -35,9 +35,9 @@ export default function DraftClient({
   const [picks, setPicks] = useState(initialPicks);
   const [loading, setLoading] = useState(false);
 
-  // NEW: Live draft state + all picks
+  // Live draft state + all picks from server
   const [draftState, setDraftState] = useState<DraftState | null>(null);
-  const [allPicks, setAllPicks] = useState<DraftPick[]>([]);
+  const [allPicks, setAllPicks] = useState<DraftPick[]>(initialPicks);
 
   const rounds = 5;
 
@@ -50,7 +50,20 @@ export default function DraftClient({
 
       const picksRes = await fetch("/api/getPicks");
       const picksData = await picksRes.json();
-      setAllPicks(picksData.picks);
+
+      // Transform server picks → client picks
+      const transformed = picksData.picks.map((p: any) => ({
+        id: p.id,
+        ownerId: p.ownerId,
+        mlbTeamId: p.mlbTeamId,
+        round: p.round,
+        pickNumber: p.pickNumber,
+        mlbTeam: {
+          name: p.mlbTeam.name
+        }
+      }));
+
+      setAllPicks(transformed);
     };
 
     load();
@@ -58,19 +71,24 @@ export default function DraftClient({
     return () => clearInterval(interval);
   }, []);
 
-  const takenTeamIds = new Set(picks.map((p) => p.mlbTeamId));
+  // IMPORTANT: taken teams must match mlbTeamId, not mlbId
+  const takenTeamIds = new Set(allPicks.map((p) => p.mlbTeamId));
+
   const totalPicks = owners.length * rounds;
-  const currentPickNumber = picks.length + 1;
+  const currentPickNumber = allPicks.length + 1;
 
   const getLogoUrl = (team: MlbTeam) => `/logos/${team.mlbId}.png`;
 
+  // ⭐ FIXED: handlePick updates BOTH picks + allPicks AND transforms shape
   const handlePick = async (teamId: number) => {
     setLoading(true);
+
     const res = await fetch("/api/draft", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mlbTeamId: teamId })
     });
+
     setLoading(false);
 
     if (!res.ok) {
@@ -79,8 +97,23 @@ export default function DraftClient({
       return;
     }
 
-    const pick = await res.json();
-    setPicks((prev) => [...prev, pick]);
+    const p = await res.json();
+
+    // Transform Prisma pick → DraftClient pick
+    const clientPick: DraftPick = {
+      id: p.id,
+      ownerId: p.ownerId,
+      mlbTeamId: p.mlbTeamId,
+      round: p.round,
+      pickNumber: p.pickNumber,
+      mlbTeam: {
+        name: p.mlbTeam.name
+      }
+    };
+
+    // Update BOTH states so UI updates instantly
+    setPicks((prev) => [...prev, clientPick]);
+    setAllPicks((prev) => [...prev, clientPick]);
   };
 
   // Build Draft Board grid
@@ -175,11 +208,6 @@ export default function DraftClient({
 
               {[1, 2, 3, 4, 5].map((round) => {
                 const pick = grid[owner.id][round];
-                const isCurrent =
-                  pick !== null &&
-                  draftState !== null &&
-                  pick.pickNumber === draftState.currentPick - 1 &&
-                  owner.id === draftState.onTheClockOwnerId;
 
                 return (
                   <td
@@ -187,7 +215,7 @@ export default function DraftClient({
                     style={{
                       padding: "8px",
                       border: "1px solid #ddd",
-                      background: isCurrent ? "#fff3cd" : "transparent"
+                      background: pick ? "#fff3cd" : "transparent"
                     }}
                   >
                     {pick ? pick.mlbTeam.name : ""}
@@ -213,10 +241,10 @@ export default function DraftClient({
         }}
       >
         {teams
-          .filter((t) => !takenTeamIds.has(t.mlbId))
+          .filter((t) => !takenTeamIds.has(t.id)) // FIXED
           .map((team) => (
             <div
-              key={team.mlbId}
+              key={team.id}
               className="card"
               style={{
                 display: "flex",
@@ -248,7 +276,7 @@ export default function DraftClient({
               </div>
 
               <button
-                onClick={() => handlePick(team.mlbId)}
+                onClick={() => handlePick(team.id)}
                 disabled={loading}
                 style={{
                   marginLeft: "auto",
