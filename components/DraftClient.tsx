@@ -93,21 +93,21 @@ export default function DraftClient({
         {teams
           .filter((t) => !takenTeamIds.has(t.id))
           .map((team) => (
-          <button
-            key={team.id}
-            onClick={() => handlePick(team.id)}
-            disabled={loading}
-            className="card"
-            style={{
-              display: "block",
-              textAlign: "left",
-              cursor: "pointer",
-              background: "white"
-            }}
-          >
-            <div style={{ fontWeight: 600 }}>{team.name}</div>
-            <div style={{ color: "#666", fontSize: "14px" }}>{team.division}</div>
-          </button>
+            <button
+              key={team.id}
+              onClick={() => handlePick(team.id)}
+              disabled={loading}
+              className="card"
+              style={{
+                display: "block",
+                textAlign: "left",
+                cursor: "pointer",
+                background: "white"
+              }}
+            >
+              <div style={{ fontWeight: 600 }}>{team.name}</div>
+              <div style={{ color: "#666", fontSize: "14px" }}>{team.division}</div>
+            </button>
           ))}
       </div>
     </div>
