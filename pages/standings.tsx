@@ -133,7 +133,7 @@ export default function StandingsPage({
           </button>
 
           <div style={{ fontSize: "13px", color: "#666" }}>
-            Last Data Refresh: {lastUpdated}
+            Last Data Refresh: {new Date(lastUpdated).toLocaleString()}
           </div>
         </div>
       </div>
