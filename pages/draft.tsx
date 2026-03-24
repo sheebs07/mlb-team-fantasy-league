@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import DraftClient from "@/app/draft/DraftClient";
+import DraftClient from "@/app/components/DraftClient";
 
 type Owner = {
   id: number;
