@@ -4,6 +4,7 @@ type Team = {
   id: number;
   name: string;
   division: string;
+  mlbId: number;
 };
 
 type TeamsPageProps = {
@@ -12,6 +13,12 @@ type TeamsPageProps = {
 
 export async function getServerSideProps() {
   const teams = await prisma.mlbTeam.findMany({
+    select: {
+      id: true,
+      name: true,
+      division: true,
+      mlbId: true
+    },
     orderBy: { name: "asc" }
   });
 
@@ -21,6 +28,8 @@ export async function getServerSideProps() {
 }
 
 export default function TeamsPage({ teams }: TeamsPageProps) {
+  const getLogoUrl = (team: Team) => `/logos/${team.mlbId}.png`;
+
   return (
     <div>
       <h1 style={{ marginBottom: "20px" }}>MLB Teams</h1>
@@ -28,14 +37,42 @@ export default function TeamsPage({ teams }: TeamsPageProps) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
           gap: "16px"
         }}
       >
         {teams.map((team) => (
-          <div className="card" key={team.id}>
-            <h2 style={{ marginBottom: "8px" }}>{team.name}</h2>
-            <p style={{ color: "#555" }}>{team.division}</p>
+          <div
+            key={team.id}
+            className="card"
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              padding: "12px",
+              gap: "12px",
+              background: "white"
+            }}
+          >
+            <img
+              src={getLogoUrl(team)}
+              alt={team.name}
+              style={{
+                width: "48px",
+                height: "48px",
+                objectFit: "contain"
+              }}
+            />
+
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ fontWeight: 600, fontSize: "15px" }}>
+                {team.name}
+              </div>
+
+              <div style={{ color: "#666", fontSize: "13px" }}>
+                {team.division}
+              </div>
+            </div>
           </div>
         ))}
       </div>
