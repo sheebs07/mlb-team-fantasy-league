@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { prisma } from "@/lib/prisma";
 
 type OwnerRow = {
@@ -5,6 +6,7 @@ type OwnerRow = {
   ownerName: string;
   wins: number;
   losses: number;
+  pct: number;
   teams: {
     mlbId: number;
     name: string;
@@ -37,96 +39,113 @@ export async function getServerSideProps() {
 
     const wins = teams.reduce((sum, t) => sum + t.wins, 0);
     const losses = teams.reduce((sum, t) => sum + t.losses, 0);
+    const pct = wins + losses > 0 ? wins / (wins + losses) : 0;
 
     return {
       ownerId: o.id,
       ownerName: o.name,
       wins,
       losses,
+      pct,
       teams
     };
   });
 
-  // Sort owners by wins, then win %
-  rows.sort((a, b) => {
-    const pctA = a.wins + a.losses > 0 ? a.wins / (a.wins + a.losses) : 0;
-    const pctB = b.wins + b.losses > 0 ? b.wins / (b.wins + b.losses) : 0;
-    return b.wins - a.wins || pctB - pctA;
-  });
+  rows.sort((a, b) => b.pct - a.pct);
 
   return { props: { rows } };
 }
 
 export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
   const logo = (mlbId: number) => `/logos/${mlbId}.png`;
+  const [open, setOpen] = useState<Record<number, boolean>>({});
+
+  const toggle = (ownerId: number) =>
+    setOpen((prev) => ({ ...prev, [ownerId]: !prev[ownerId] }));
 
   return (
     <div>
       <h1 style={{ marginBottom: "20px" }}>League Standings</h1>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        {rows.map((owner) => (
-          <div
-            key={owner.ownerId}
-            className="card"
-            style={{
-              padding: "16px",
-              background: "white",
-              borderRadius: "8px"
-            }}
-          >
-            {/* OWNER SUMMARY ROW */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontWeight: 700,
-                fontSize: "18px",
-                marginBottom: "10px"
-              }}
-            >
-              <span>{owner.ownerName}</span>
-              <span>
-                {owner.wins}-{owner.losses}
-              </span>
-            </div>
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          marginBottom: "20px"
+        }}
+      >
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", borderBottom: "2px solid #ccc" }}>
+              Owner
+            </th>
+            <th style={{ textAlign: "right", borderBottom: "2px solid #ccc" }}>
+              Wins
+            </th>
+            <th style={{ textAlign: "right", borderBottom: "2px solid #ccc" }}>
+              Losses
+            </th>
+            <th style={{ textAlign: "right", borderBottom: "2px solid #ccc" }}>
+              Win %
+            </th>
+          </tr>
+        </thead>
 
-            {/* NESTED TEAM ROWS */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {owner.teams.map((team) => (
-                <div
-                  key={team.mlbId}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "6px 0",
-                    borderBottom: "1px solid #eee"
-                  }}
-                >
-                  <img
-                    src={logo(team.mlbId)}
-                    alt={team.name}
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      objectFit: "contain",
-                      marginRight: "10px"
-                    }}
-                  />
+        <tbody>
+          {rows.map((owner) => (
+            <>
+              {/* OWNER SUMMARY ROW */}
+              <tr
+                key={owner.ownerId}
+                onClick={() => toggle(owner.ownerId)}
+                style={{
+                  cursor: "pointer",
+                  background: "#f7f7f7"
+                }}
+              >
+                <td style={{ padding: "8px 0" }}>
+                  {owner.ownerName}
+                  <span style={{ marginLeft: "8px", color: "#888" }}>
+                    {open[owner.ownerId] ? "▲" : "▼"}
+                  </span>
+                </td>
+                <td style={{ textAlign: "right" }}>{owner.wins}</td>
+                <td style={{ textAlign: "right" }}>{owner.losses}</td>
+                <td style={{ textAlign: "right" }}>
+                  {owner.pct.toFixed(3)}
+                </td>
+              </tr>
 
-                  <div style={{ flexGrow: 1, fontSize: "15px" }}>
-                    {team.name}
-                  </div>
-
-                  <div style={{ fontWeight: 600 }}>
-                    {team.wins}-{team.losses}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+              {/* COLLAPSIBLE TEAM ROWS */}
+              {open[owner.ownerId] &&
+                owner.teams.map((team) => (
+                  <tr key={team.mlbId}>
+                    <td style={{ padding: "6px 0 6px 20px", display: "flex", alignItems: "center", gap: "10px" }}>
+                      <img
+                        src={logo(team.mlbId)}
+                        alt={team.name}
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          objectFit: "contain"
+                        }}
+                      />
+                      {team.name}
+                    </td>
+                    <td style={{ textAlign: "right" }}>{team.wins}</td>
+                    <td style={{ textAlign: "right" }}>{team.losses}</td>
+                    <td style={{ textAlign: "right" }}>
+                      {(team.wins + team.losses > 0
+                        ? team.wins / (team.wins + team.losses)
+                        : 0
+                      ).toFixed(3)}
+                    </td>
+                  </tr>
+                ))}
+            </>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
