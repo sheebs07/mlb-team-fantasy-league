@@ -93,10 +93,8 @@ export default function DraftClient({
         {teams
           .filter((t) => !takenTeamIds.has(t.id))
           .map((team) => (
-            <button
+            <div
               key={team.id}
-              onClick={() => handlePick(team.id)}
-              disabled={loading}
               className="card"
               style={{
                 display: "flex",
@@ -104,18 +102,30 @@ export default function DraftClient({
                 alignItems: "flex-start",
                 padding: "12px",
                 gap: "10px",
-                cursor: "pointer",
                 background: "white"
               }}
             >
-              <span style={{ fontWeight: 600, fontSize: "14px", lineHeight: "1.2" }}>
+              <div style={{ fontWeight: 600, fontSize: "14px" }}>
                 {team.name}
-              </span>
+              </div>
 
-              <span style={{ color: "#666", fontSize: "13px", marginTop: "4px" }}>
+              <div style={{ color: "#666", fontSize: "13px" }}>
                 {team.division}
-              </span>
-            </button>
+              </div>
+
+              <button
+                onClick={() => handlePick(team.id)}
+                disabled={loading}
+                style={{
+                  marginTop: "8px",
+                  padding: "6px 10px",
+                  fontSize: "14px",
+                  cursor: "pointer"
+                }}
+              >
+                Draft Team
+              </button>
+            </div>
           ))}
       </div>
     </div>
