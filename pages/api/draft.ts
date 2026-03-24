@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === "POST") {
     const { mlbTeamId } = req.body;
 
-    const owners = await prisma.owner.findMany({ orderBy: { id: "asc" } });
+    const owners = await prisma.owner.findMany({ orderBy: { draftSlot: "asc" } });
     const ownerIds = owners.map(o => o.id);
     const snakeOrder = generateSnakeOrder(ownerIds, ROUNDS);
 
