@@ -30,7 +30,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           where: { mlbId },
           update: {
             name: team.name,
-            division: record.division?.name ?? "Unknown"
           },
           create: {
             mlbId,
