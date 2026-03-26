@@ -55,8 +55,12 @@ export async function getServerSideProps() {
     };
   });
 
-  // Sort by win %, then wins
-  rows.sort((a, b) => b.pct - a.pct || b.wins - a.wins);
+  // Sort by wins, win %, then losses
+  rows.sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.pct !== a.pct) return b.pct - a.pct;
+    return a.losses - b.losses;
+  });
 
   // Dense ranking
   if (rows.length > 0) {
@@ -67,10 +71,10 @@ export async function getServerSideProps() {
       const prev = rows[i - 1];
       const curr = rows[i];
 
+      // FIXED: 0–0 and 0–1 are NOT the same
       const sameRecord =
         prev.wins === curr.wins &&
-        prev.losses === curr.losses &&
-        prev.pct === curr.pct;
+        prev.losses === curr.losses;
 
       if (!sameRecord) currentRank += 1;
 

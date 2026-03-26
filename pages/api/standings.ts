@@ -41,7 +41,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
     });
 
-    standings.sort((a, b) => b.wins - a.wins || b.pct - a.pct);
+    // ⭐ Correct sorting:
+    // 1. Wins (desc)
+    // 2. Win % (desc)
+    // 3. Losses (desc)
+    standings.sort((a, b) => {
+      // 1. Wins (descending)
+      if (b.wins !== a.wins) return b.wins - a.wins;
+
+      // 2. Win % (descending)
+      if (b.pct !== a.pct) return b.pct - a.pct;
+
+      // 3. Losses (descending)
+      return a.losses - b.losses;
+    });
 
     return res.status(200).json(standings);
   } catch (err: any) {

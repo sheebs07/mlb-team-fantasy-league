@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const season = 2024;
+    const season = 2026;
 
     const apiRes = await fetch(
       `https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=${season}`
