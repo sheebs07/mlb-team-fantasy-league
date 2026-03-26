@@ -64,7 +64,7 @@ export async function getServerSideProps() {
   rows.sort((a, b) => {
     if (b.wins !== a.wins) return b.wins - a.wins;
     if (b.pct !== a.pct) return b.pct - a.pct;
-    return b.losses - a.losses;
+    return a.losses - b.losses;
   });
 
   // ⭐ Correct dense ranking
