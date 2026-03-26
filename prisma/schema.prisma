@@ -42,3 +42,8 @@ model MlbStanding {
   pct       Float
   updatedAt DateTime @updatedAt
 }
+
+model MlbSyncMeta {
+  id          Int      @id @default(1)
+  lastUpdated DateTime @default(now())
+}
