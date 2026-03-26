@@ -67,23 +67,23 @@ export async function getServerSideProps() {
     return a.losses - b.losses;
   });
 
-  // ⭐ Correct dense ranking
+  // Standard ranking (1, 2, 2, 2, 2, 6)
   if (rows.length > 0) {
-    let currentRank = 1;
     rows[0].rank = 1;
 
     for (let i = 1; i < rows.length; i++) {
       const prev = rows[i - 1];
       const curr = rows[i];
 
-      // 0–0 and 0–1 are NOT the same
       const sameRecord =
         prev.wins === curr.wins &&
         prev.losses === curr.losses;
 
-      if (!sameRecord) currentRank += 1;
-
-      curr.rank = currentRank;
+      if (sameRecord) {
+        curr.rank = prev.rank; // same rank
+      } else {
+        curr.rank = i + 1; // position in list
+      }
     }
   }
 
