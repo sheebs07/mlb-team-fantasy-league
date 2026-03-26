@@ -5,7 +5,9 @@ export default async function handler(req: any, res: any) {
     orderBy: { draftSlot: "asc" }
   });
 
-  const picks = await prisma.draftPick.findMany();
+  const picks = await prisma.draftPick.findMany({
+    orderBy: { pickNumber: "asc" }
+  });
 
   const rounds = 5;
   const snakeOrder: number[] = [];

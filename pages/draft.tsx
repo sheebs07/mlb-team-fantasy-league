@@ -22,6 +22,7 @@ type DraftPickClient = {
   pickNumber: number;
   mlbTeam: {
     name: string;
+    mlbId: number;
   };
 };
 
@@ -52,7 +53,8 @@ export const getServerSideProps: GetServerSideProps<DraftPageProps> = async () =
     round: p.round,
     pickNumber: p.pickNumber,
     mlbTeam: {
-      name: p.mlbTeam.name
+      name: p.mlbTeam.name,
+      mlbId: p.mlbTeam.mlbId
     }
   }));
 
@@ -73,8 +75,7 @@ export const getServerSideProps: GetServerSideProps<DraftPageProps> = async () =
 export default function DraftPage({ owners, teams, picks }: DraftPageProps) {
   return (
     <div style={{ padding: "20px" }}>
-      <h1 style={{ marginBottom: "20px" }}>Live Draft</h1>
-
+      <h1 style={{ marginBottom: "20px" }}>Draft Board</h1>
       <DraftClient owners={owners} teams={teams} picks={picks} />
     </div>
   );
