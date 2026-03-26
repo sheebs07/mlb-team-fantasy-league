@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
-import { generateSnakeOrder } from "@/lib/draft"; // if needed elsewhere
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -25,11 +24,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const losses = teamRec.losses;
         const pct = parseFloat(teamRec.winningPercentage);
 
-        // Upsert MLB team
+        // Upsert MLB team (never overwrite division)
         const mlbTeam = await prisma.mlbTeam.upsert({
           where: { mlbId },
           update: {
-            name: team.name,
+            name: team.name
           },
           create: {
             mlbId,
@@ -51,6 +50,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
     }
+
+    // ⭐ GLOBAL TIMESTAMP UPDATE (shared across all users)
+    await prisma.mlbSyncMeta.upsert({
+      where: { id: 1 },
+      update: { lastUpdated: new Date() },
+      create: { id: 1, lastUpdated: new Date() }
+    });
 
     return res.status(200).json({ status: "ok" });
   } catch (err: any) {

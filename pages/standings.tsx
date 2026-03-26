@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { prisma } from "@/lib/prisma";
 
 type OwnerRow = {
@@ -32,6 +32,11 @@ export async function getServerSideProps() {
     orderBy: { name: "asc" }
   });
 
+  // ⭐ Load global timestamp
+  const meta = await prisma.mlbSyncMeta.findUnique({
+    where: { id: 1 }
+  });
+
   const rows: OwnerRow[] = owners.map((o) => {
     const teams = o.picks.map((p) => ({
       mlbId: p.mlbTeam.mlbId,
@@ -55,14 +60,14 @@ export async function getServerSideProps() {
     };
   });
 
-  // Sort by wins, win %, then losses
+  // ⭐ Correct sorting: wins desc → pct desc → losses desc
   rows.sort((a, b) => {
     if (b.wins !== a.wins) return b.wins - a.wins;
     if (b.pct !== a.pct) return b.pct - a.pct;
-    return a.losses - b.losses;
+    return b.losses - a.losses;
   });
 
-  // Dense ranking
+  // ⭐ Correct dense ranking
   if (rows.length > 0) {
     let currentRank = 1;
     rows[0].rank = 1;
@@ -71,7 +76,7 @@ export async function getServerSideProps() {
       const prev = rows[i - 1];
       const curr = rows[i];
 
-      // FIXED: 0–0 and 0–1 are NOT the same
+      // 0–0 and 0–1 are NOT the same
       const sameRecord =
         prev.wins === curr.wins &&
         prev.losses === curr.losses;
@@ -84,25 +89,21 @@ export async function getServerSideProps() {
 
   return {
     props: {
-      rows
+      rows,
+      lastUpdated: meta?.lastUpdated?.toISOString() ?? null
     }
   };
 }
 
-export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
+export default function StandingsPage({
+  rows,
+  lastUpdated
+}: {
+  rows: OwnerRow[];
+  lastUpdated: string | null;
+}) {
   const [open, setOpen] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(false);
-
-  // ⭐ Local timestamp stored in browser only
-  const [localTime, setLocalTime] = useState("");
-
-  // Load saved timestamp on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("lastRefresh");
-    if (saved) {
-      setLocalTime(new Date(saved).toLocaleString());
-    }
-  }, []);
 
   const logo = (mlbId: number) => `/logos/${mlbId}.png`;
 
@@ -112,12 +113,6 @@ export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
   const refreshData = async () => {
     setLoading(true);
     await fetch("/api/mlb-sync", { method: "POST" });
-
-    // ⭐ Save timestamp to localStorage
-    const now = new Date().toISOString();
-    localStorage.setItem("lastRefresh", now);
-    setLocalTime(new Date(now).toLocaleString());
-
     window.location.reload();
   };
 
@@ -149,7 +144,10 @@ export default function StandingsPage({ rows }: { rows: OwnerRow[] }) {
           </button>
 
           <div style={{ fontSize: "13px", color: "#666" }}>
-            Last Data Refresh: {localTime || "—"}
+            Last Data Refresh:{" "}
+            {lastUpdated
+              ? new Date(lastUpdated).toLocaleString()
+              : "—"}
           </div>
         </div>
       </div>
