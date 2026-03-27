@@ -49,8 +49,8 @@ model MlbSyncMeta {
 }
 
 model Settings {
-  id            Int     @id @default(autoincrement())
-  draftType     String  @default("Snake") // "snake" or "linear"
-  rounds        Int     @default(5)
-  commissionerPassword String
+  id                    Int     @id @default(autoincrement())
+  draftType             String  @default("Snake") // "snake" or "linear"
+  rounds                Int     @default(5)
+  commissionerPassword  String
 }
