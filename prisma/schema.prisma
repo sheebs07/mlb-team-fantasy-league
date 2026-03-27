@@ -48,7 +48,7 @@ model MlbSyncMeta {
   lastUpdated DateTime @default(now())
 }
 
-model LeagueSettings {
+model Settings {
   id            Int     @id @default(autoincrement())
   draftType     String  @default("Snake") // "snake" or "linear"
   rounds        Int     @default(5)
