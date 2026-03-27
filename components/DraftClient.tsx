@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 
 type Owner = { id: number; name: string };
+
 type MlbTeam = { id: number; name: string; division: string; mlbId: number };
 
 type DraftPick = {
@@ -24,22 +25,31 @@ type DraftState = {
   snakeOrder: number[];
 };
 
+type Settings = {
+  id: number;
+  draftType: string; // "snake" or "linear"
+  rounds: number;
+  commissionerPassword: string;
+};
+
 export default function DraftClient({
   owners,
   teams,
-  picks: initialPicks
+  picks: initialPicks,
+  settings
 }: {
   owners: Owner[];
   teams: MlbTeam[];
   picks: DraftPick[];
+  settings: Settings;
 }) {
   const [picks, setPicks] = useState(initialPicks);
   const [loading, setLoading] = useState(false);
-
   const [draftState, setDraftState] = useState<DraftState | null>(null);
   const [allPicks, setAllPicks] = useState<DraftPick[]>(initialPicks);
 
-  const rounds = 5;
+  const rounds = settings.rounds;
+  const isSnake = settings.draftType === "snake";
 
   // Poll draft state + picks every 3 seconds
   useEffect(() => {
@@ -72,11 +82,9 @@ export default function DraftClient({
   }, []);
 
   const takenTeamIds = new Set(allPicks.map((p) => p.mlbTeamId));
-
   const totalPicks = owners.length * rounds;
   const currentPickNumber = allPicks.length + 1;
 
-  // ⭐ Detect draft completion
   const draftComplete = allPicks.length >= totalPicks;
 
   const getLogoUrl = (team: MlbTeam) => `/logos/${team.mlbId}.png`;
@@ -118,6 +126,7 @@ export default function DraftClient({
 
   // Build pivoted grid: grid[round][ownerId]
   const grid: Record<number, Record<number, DraftPick | null>> = {};
+
   for (let r = 1; r <= rounds; r++) {
     grid[r] = {};
     owners.forEach((o) => {
@@ -129,12 +138,14 @@ export default function DraftClient({
     grid[p.round][p.ownerId] = p;
   });
 
-  // ⭐ Compute next 5 picks (including on-the-clock)
+  // Compute next 5 picks (including on-the-clock)
   let nextPicks: { pickNumber: number; ownerId: number }[] = [];
+
   if (draftState && !draftComplete) {
     for (let i = 0; i < 6; i++) {
       const pickNum = draftState.currentPick + i;
       if (pickNum > totalPicks) break;
+
       const ownerId = draftState.snakeOrder[pickNum - 1];
       nextPicks.push({ pickNumber: pickNum, ownerId });
     }
@@ -155,9 +166,7 @@ export default function DraftClient({
         )}
       </div>
 
-      {/* ============================
-          UPCOMING PICKS STRIP
-      ============================ */}
+      {/* UPCOMING PICKS STRIP */}
       {!draftComplete && draftState && (
         <div
           style={{
@@ -188,21 +197,26 @@ export default function DraftClient({
                   }}
                 >
                   {idx === 0 ? "On the Clock: " : ""}
+
                   {(() => {
                     const ownersPerRound = owners.length;
                     const overall = np.pickNumber;
                     const round = Math.ceil(overall / ownersPerRound);
 
-                    // ⭐ Correct owner index based on snake order
+                    // Correct owner index based on snake order
                     const indexInSnake = overall - 1;
-                    const ownerIdForPick = draftState.snakeOrder[indexInSnake];
-                    const ownerIndexInRound = owners.findIndex(o => o.id === ownerIdForPick);
+                    const ownerIdForPick =
+                      draftState.snakeOrder[indexInSnake];
+                    const ownerIndexInRound = owners.findIndex(
+                      (o) => o.id === ownerIdForPick
+                    );
 
-                    // ⭐ Correct snake pick-in-round
-                    const pickInRound =
-                      round % 2 === 1
+                    // Correct pick-in-round
+                    const pickInRound = isSnake
+                      ? round % 2 === 1
                         ? ownerIndexInRound + 1
-                        : ownersPerRound - ownerIndexInRound;
+                        : ownersPerRound - ownerIndexInRound
+                      : ownerIndexInRound + 1;
 
                     return `${owner?.name} - ${round}.${pickInRound} (#${overall})`;
                   })()}
@@ -213,10 +227,7 @@ export default function DraftClient({
         </div>
       )}
 
-      {/* ============================
-          DRAFT BOARD (PIVOTED)
-      ============================ */}
-
+      {/* DRAFT BOARD */}
       <table
         style={{
           width: "100%",
@@ -243,7 +254,8 @@ export default function DraftClient({
                   textAlign: "center",
                   fontWeight: "700",
                   background:
-                    draftState?.onTheClockOwnerId === owner.id && !draftComplete
+                    draftState?.onTheClockOwnerId === owner.id &&
+                    !draftComplete
                       ? "#e0ffe0"
                       : "transparent"
                 }}
@@ -255,7 +267,7 @@ export default function DraftClient({
         </thead>
 
         <tbody>
-          {[1, 2, 3, 4, 5].map((round) => (
+          {Array.from({ length: rounds }, (_, i) => i + 1).map((round) => (
             <tr key={round}>
               <td
                 style={{
@@ -269,24 +281,26 @@ export default function DraftClient({
 
               {owners.map((owner) => {
                 const pick = grid[round][owner.id];
-                const ownerIndex = owners.findIndex((o) => o.id === owner.id);
+                const ownerIndex = owners.findIndex(
+                  (o) => o.id === owner.id
+                );
 
-                const isCurrentPick =
-                  pick?.pickNumber === draftState?.currentPick;
-
-                // ⭐ Compute this cell's overall pick number in a snake draft
                 const ownersPerRound = owners.length;
-                let overallPickNumber: number | null = null;
 
-                if (round % 2 === 1) {
-                  // odd round → forward
+                // Compute overall pick number
+                let overallPickNumber: number;
+
+                if (!isSnake) {
+                  // Linear draft
                   overallPickNumber =
                     (round - 1) * ownersPerRound + (ownerIndex + 1);
                 } else {
-                  // even round → reverse
+                  // Snake draft
                   overallPickNumber =
-                    (round - 1) * ownersPerRound +
-                    (ownersPerRound - ownerIndex);
+                    round % 2 === 1
+                      ? (round - 1) * ownersPerRound + (ownerIndex + 1)
+                      : (round - 1) * ownersPerRound +
+                        (ownersPerRound - ownerIndex);
                 }
 
                 const isOnClock =
@@ -300,14 +314,14 @@ export default function DraftClient({
                       padding: "8px",
                       border: "1px solid #ddd",
                       background: isOnClock
-                        ? "#e0ffe0" // ⭐ on the clock
+                        ? "#e0ffe0"
                         : pick
-                        ? "#fff3cd" // drafted
+                        ? "#fff3cd"
                         : "transparent"
                     }}
                   >
                     {pick ? (
-                      // ⭐ Drafted cell — show ONLY logo + team name
+                      // Drafted cell
                       <div
                         style={{
                           display: "flex",
@@ -344,16 +358,16 @@ export default function DraftClient({
                         </div>
                       </div>
                     ) : (
-                      // ⭐ Empty cell — show Round.Pick
+                      // Empty cell — show Round.Pick
                       <div style={{ fontSize: "14px", color: "#555" }}>
                         {(() => {
-                          const ownersPerRound = owners.length;
-                          const indexInRound = ((round - 1) * ownersPerRound + owners.indexOf(owner)) % ownersPerRound;
+                          const indexInRound = ownerIndex;
 
-                          const pickInRound =
-                            round % 2 === 1
-                              ? indexInRound + 1        // odd round → forward
-                              : ownersPerRound - indexInRound; // even round → reverse
+                          const pickInRound = !isSnake
+                            ? indexInRound + 1
+                            : round % 2 === 1
+                            ? indexInRound + 1
+                            : ownersPerRound - indexInRound;
 
                           return `${round}.${pickInRound}`;
                         })()}
@@ -367,10 +381,9 @@ export default function DraftClient({
         </tbody>
       </table>
 
-      {/* ============================
-          AVAILABLE TEAMS
-      ============================ */}
+      {/* AVAILABLE TEAMS */}
       <h3 style={{ marginBottom: "10px" }}>Available Teams</h3>
+
       {loading && <p style={{ color: "#777" }}>Submitting pick…</p>}
 
       <div
@@ -409,7 +422,6 @@ export default function DraftClient({
                 <div style={{ fontWeight: 600, fontSize: "15px" }}>
                   {team.name}
                 </div>
-
                 <div style={{ color: "#666", fontSize: "13px" }}>
                   {team.division}
                 </div>

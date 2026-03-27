@@ -11,7 +11,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
         <Link href="/owners">Owners</Link>
         <Link href="/teams">Teams</Link>
         <Link href="/draft">Draft</Link>
-        <Link href="/commissioner">Commissioner</Link>
+        <Link href="/settings">Settings</Link>
       </nav>
 
       <main>

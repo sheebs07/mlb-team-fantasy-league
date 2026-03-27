@@ -26,10 +26,18 @@ type DraftPickClient = {
   };
 };
 
+type Settings = {
+  id: number;
+  draftType: string;   // "snake" or "linear"
+  rounds: number;
+  commissionerPassword: string;
+};
+
 type DraftPageProps = {
   owners: Owner[];
   teams: MlbTeam[];
   picks: DraftPickClient[];
+  settings: Settings;
 };
 
 export const getServerSideProps: GetServerSideProps<DraftPageProps> = async () => {
@@ -45,6 +53,9 @@ export const getServerSideProps: GetServerSideProps<DraftPageProps> = async () =
     include: { mlbTeam: true },
     orderBy: { pickNumber: "asc" }
   });
+
+  // ⭐ NEW: Load league settings
+  const settings = await prisma.settings.findFirst();
 
   const clientPicks: DraftPickClient[] = picks.map((p) => ({
     id: p.id,
@@ -67,16 +78,19 @@ export const getServerSideProps: GetServerSideProps<DraftPageProps> = async () =
         division: t.division,
         mlbId: t.mlbId
       })),
-      picks: clientPicks
+      picks: clientPicks,
+      settings: settings as Settings
     }
   };
 };
 
-export default function DraftPage({ owners, teams, picks }: DraftPageProps) {
+export default function DraftPage({ owners, teams, picks, settings }: DraftPageProps) {
   return (
     <div style={{ padding: "20px" }}>
       <h1 style={{ marginBottom: "20px" }}>Draft Board</h1>
-      <DraftClient owners={owners} teams={teams} picks={picks} />
+
+      {/* ⭐ Pass settings into DraftClient */}
+      <DraftClient owners={owners} teams={teams} picks={picks} settings={settings} />
     </div>
   );
 }
