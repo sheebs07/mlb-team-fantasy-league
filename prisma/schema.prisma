@@ -53,4 +53,6 @@ model Settings {
   draftType             String  @default("Snake") // "snake" or "linear"
   rounds                Int     @default(5)
   commissionerPassword  String
+  pickClockSeconds      Int     @default(60)
+  warningSeconds        Int     @default(15)
 }
