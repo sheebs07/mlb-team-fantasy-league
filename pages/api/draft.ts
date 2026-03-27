@@ -1,8 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
-import { generateSnakeOrder } from "@/lib/draft";
-
-const ROUNDS = 5;
+import { generateDraftOrder } from "@/lib/draft";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "GET") {
@@ -16,14 +14,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === "POST") {
     const { mlbTeamId } = req.body;
 
+    // Load league settings
+    const settings = await prisma.settings.findFirst();
+    if (!settings) {
+      return res.status(500).json({ error: "League settings missing" });
+    }
+
+    const { rounds, draftType } = settings;
+
     // Load owners in draft order
     const owners = await prisma.owner.findMany({
       orderBy: { draftSlot: "asc" }
     });
     const ownerIds = owners.map(o => o.id);
 
-    // Generate simple snake order: [1,2,3,4,5,6,6,5,4,3,2,1,...]
-    const snakeOrder = generateSnakeOrder(ownerIds, ROUNDS);
+    // Generate full draft order
+    const draftOrder = generateDraftOrder(ownerIds, rounds, draftType as "snake" | "linear");
 
     // Load existing picks
     const existingPicks = await prisma.draftPick.findMany({
@@ -31,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // Draft complete?
-    if (existingPicks.length >= snakeOrder.length) {
+    if (existingPicks.length >= draftOrder.length) {
       return res.status(400).json({ error: "Draft complete" });
     }
 
@@ -44,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Determine next owner
-    const nextOwnerId = snakeOrder[existingPicks.length];
+    const nextOwnerId = draftOrder[existingPicks.length];
 
     // Compute pick number + round
     const pickNumber = existingPicks.length + 1;

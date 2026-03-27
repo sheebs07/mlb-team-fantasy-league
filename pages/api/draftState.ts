@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { generateDraftOrder } from "@/lib/draft";
 
 export default async function handler(req: any, res: any) {
   const owners = await prisma.owner.findMany({
@@ -9,22 +10,26 @@ export default async function handler(req: any, res: any) {
     orderBy: { pickNumber: "asc" }
   });
 
-  const rounds = 5;
-  const snakeOrder: number[] = [];
-
-  for (let round = 1; round <= rounds; round++) {
-    const forward = round % 2 === 1;
-    const order = forward ? owners : [...owners].reverse();
-    for (const owner of order) snakeOrder.push(owner.id);
+  // Load league settings
+  const settings = await prisma.settings.findFirst();
+  if (!settings) {
+    return res.status(500).json({ error: "League settings missing" });
   }
 
+  const { rounds, draftType } = settings;
+
+  const ownerIds = owners.map(o => o.id);
+
+  // Build full draft order
+  const draftOrder = generateDraftOrder(ownerIds, rounds, draftType as "snake" | "linear");
+
   const currentPick = picks.length + 1;
-  const onTheClockOwnerId = snakeOrder[picks.length];
+  const onTheClockOwnerId = draftOrder[picks.length];
 
   res.status(200).json({
     currentPick,
     currentRound: Math.ceil(currentPick / owners.length),
     onTheClockOwnerId,
-    snakeOrder
+    snakeOrder: draftOrder
   });
 }
