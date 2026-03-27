@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { draftType, rounds } = req.body;
+    const { draftType, rounds, pickClockSeconds, warningSeconds } = req.body;
 
     if (!draftType || !rounds) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -17,8 +17,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { id: 1 }, // assuming single row
       data: {
         draftType,
-        rounds: Number(rounds)
+        rounds: Number(rounds),
+        pickClockSeconds: Number(pickClockSeconds),
+        warningSeconds: Number(warningSeconds)
       }
+
     });
 
     return res.status(200).json({ settings: updated });

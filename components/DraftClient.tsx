@@ -23,13 +23,18 @@ type DraftState = {
   currentRound: number;
   onTheClockOwnerId: number;
   snakeOrder: number[];
+  pickStartTime: string; // ISO string from server
+  draftStatus: "inactive" | "active" | "completed";
+  preDraftStartTime: string | null; // ISO string or null
 };
 
 type Settings = {
   id: number;
-  draftType: string; // "snake" or "linear"
+  draftType: string;
   rounds: number;
   commissionerPassword: string;
+  pickClockSeconds: number;
+  warningSeconds: number;
 };
 
 export default function DraftClient({
@@ -47,9 +52,46 @@ export default function DraftClient({
   const [loading, setLoading] = useState(false);
   const [draftState, setDraftState] = useState<DraftState | null>(null);
   const [allPicks, setAllPicks] = useState<DraftPick[]>(initialPicks);
+  const [preCountdown, setPreCountdown] = useState<number | null>(null);
 
   const rounds = settings.rounds;
   const isSnake = settings.draftType === "snake";
+
+  // ⭐ Commissioner Login
+  const [isCommissioner, setIsCommissioner] = useState(false);
+  const [showPassPrompt, setShowPassPrompt] = useState(false);
+  const [passcode, setPasscode] = useState("");
+
+  const handleCommissionerAuth = () => {
+    if (passcode === settings.commissionerPassword) {
+      setIsCommissioner(true);
+      setShowPassPrompt(false);
+    } else {
+      alert("Incorrect passcode");
+    }
+  };
+
+  // ⭐ Pick Clock
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  // ⭐ Helper: short team names (no cities)
+  const getShortTeamName = (fullName: string) => {
+    const parts = fullName.split(" ");
+    return parts[parts.length - 1];
+  };
+
+  // ⭐ Helper: get owner for a given overall pick number
+  const getOwnerForPick = (overallPick: number) => {
+    if (!draftState) return null;
+
+    if (isSnake) {
+      return draftState.snakeOrder[overallPick - 1];
+    }
+
+    const ownersPerRound = owners.length;
+    const index = (overallPick - 1) % ownersPerRound;
+    return owners[index].id;
+  };
 
   // Poll draft state + picks every 3 seconds
   useEffect(() => {
@@ -81,10 +123,53 @@ export default function DraftClient({
     return () => clearInterval(interval);
   }, []);
 
+  // ⭐ Compute timeLeft from server pickStartTime
+  useEffect(() => {
+    if (!draftState?.pickStartTime) return;
+
+    const start = new Date(draftState.pickStartTime).getTime();
+    const now = Date.now();
+    const elapsed = Math.floor((now - start) / 1000);
+    const remaining = settings.pickClockSeconds - elapsed;
+
+    setTimeLeft(Math.max(remaining, 0));
+  }, [draftState?.pickStartTime, settings.pickClockSeconds]);
+
+  // ⭐ Smooth ticking countdown
+  useEffect(() => {
+    if (timeLeft === null) return;
+    if (timeLeft <= 0) return;
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timeLeft]);
+
+  // Handle 5-second pre-draft countdown
+  useEffect(() => {
+    if (!draftState) return;
+
+    if (draftState.preDraftStartTime && draftState.draftStatus === "inactive") {
+      const start = new Date(draftState.preDraftStartTime).getTime();
+      const now = Date.now();
+      const elapsed = Math.floor((now - start) / 1000);
+      const remaining = 5 - elapsed;
+
+      setPreCountdown(Math.max(remaining, 0));
+
+      if (remaining <= 0) {
+        fetch("/api/activateDraft", { method: "POST" });
+      }
+    } else {
+      setPreCountdown(null);
+    }
+  }, [draftState?.preDraftStartTime, draftState?.draftStatus]);
+
   const takenTeamIds = new Set(allPicks.map((p) => p.mlbTeamId));
   const totalPicks = owners.length * rounds;
   const currentPickNumber = allPicks.length + 1;
-
   const draftComplete = allPicks.length >= totalPicks;
 
   const getLogoUrl = (team: MlbTeam) => `/logos/${team.mlbId}.png`;
@@ -126,7 +211,6 @@ export default function DraftClient({
 
   // Build pivoted grid: grid[round][ownerId]
   const grid: Record<number, Record<number, DraftPick | null>> = {};
-
   for (let r = 1; r <= rounds; r++) {
     grid[r] = {};
     owners.forEach((o) => {
@@ -140,19 +224,18 @@ export default function DraftClient({
 
   // Compute next 5 picks (including on-the-clock)
   let nextPicks: { pickNumber: number; ownerId: number }[] = [];
-
   if (draftState && !draftComplete) {
     for (let i = 0; i < 6; i++) {
       const pickNum = draftState.currentPick + i;
       if (pickNum > totalPicks) break;
 
-      const ownerId = draftState.snakeOrder[pickNum - 1];
-      nextPicks.push({ pickNumber: pickNum, ownerId });
+      const ownerId = getOwnerForPick(pickNum);
+      nextPicks.push({ pickNumber: pickNum, ownerId: ownerId! });
     }
   }
 
   return (
-    <div>
+    <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 20px", position: "relative" }}>
       {/* Header */}
       <div style={{ marginBottom: "20px" }}>
         {!draftComplete ? (
@@ -166,71 +249,267 @@ export default function DraftClient({
         )}
       </div>
 
-      {/* UPCOMING PICKS STRIP */}
-      {!draftComplete && draftState && (
-        <div
+      {/* COMMISSIONER LOGIN BUTTON (UPPER RIGHT) */}
+      {!isCommissioner && (
+        <button
+          onClick={() => setShowPassPrompt(true)}
           style={{
-            marginBottom: "20px",
-            padding: "12px",
-            background: "#f0f7ff",
-            border: "1px solid #cce0ff",
-            borderRadius: "6px"
+            position: "absolute",
+            right: 0,
+            top: 0,
+            padding: "8px 12px",
+            background: "#0070f3",
+            color: "white",
+            borderRadius: "6px",
+            cursor: "pointer",
+            zIndex: 10
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: "8px" }}>
-            Upcoming Picks
-          </div>
+          Commissioner Login
+        </button>
+      )}
 
-          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-            {nextPicks.map((np, idx) => {
-              const owner = owners.find((o) => o.id === np.ownerId);
+      {isCommissioner && (
+        <div
+          style={{
+            position: "absolute",
+            right: 0,
+            top: 0,
+            padding: "8px 12px",
+            background: "#4caf50",
+            color: "white",
+            borderRadius: "6px",
+            fontWeight: 600,
+            zIndex: 10
+          }}
+        >
+          Commissioner Mode
+        </div>
+      )}
 
-              return (
-                <div
-                  key={np.pickNumber}
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: "4px",
-                    background: idx === 0 ? "#d4f8d4" : "#fff",
-                    border: idx === 0 ? "1px solid #8cd98c" : "1px solid #ddd",
-                    fontWeight: idx === 0 ? 700 : 500
-                  }}
-                >
-                  {idx === 0 ? "On the Clock: " : ""}
+      {/* COMMISSIONER LOGIN BUTTON */}
+      {/* {!isCommissioner && (
+        <button
+          onClick={() => setShowPassPrompt(true)}
+          style={{
+            padding: "6px 12px",
+            background: "#0070f3",
+            color: "white",
+            borderRadius: "6px",
+            cursor: "pointer",
+            marginBottom: "10px"
+          }}
+        >
+          Commissioner Login
+        </button>
+      )} */}
 
-                  {(() => {
-                    const ownersPerRound = owners.length;
-                    const overall = np.pickNumber;
-                    const round = Math.ceil(overall / ownersPerRound);
+      {/* COMMISSIONER LOGIN MODAL */}
+      {showPassPrompt && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              padding: "20px",
+              width: "350px",
+              background: "white",
+              borderRadius: "8px"
+            }}
+          >
+            <h2>Commissioner Login</h2>
 
-                    // Correct owner index based on snake order
-                    const indexInSnake = overall - 1;
-                    const ownerIdForPick =
-                      draftState.snakeOrder[indexInSnake];
-                    const ownerIndexInRound = owners.findIndex(
-                      (o) => o.id === ownerIdForPick
-                    );
+            <input
+              type="password"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              placeholder="Passcode"
+              style={{
+                width: "100%",
+                padding: "8px",
+                marginTop: "10px",
+                marginBottom: "10px"
+              }}
+            />
 
-                    // Correct pick-in-round
-                    const pickInRound = isSnake
-                      ? round % 2 === 1
-                        ? ownerIndexInRound + 1
-                        : ownersPerRound - ownerIndexInRound
-                      : ownerIndexInRound + 1;
+            <button
+              onClick={handleCommissionerAuth}
+              style={{
+                padding: "8px 12px",
+                background: "#0070f3",
+                color: "white",
+                borderRadius: "6px",
+                cursor: "pointer",
+                width: "100%"
+              }}
+            >
+              Unlock
+            </button>
 
-                    return `${owner?.name} - ${round}.${pickInRound} (#${overall})`;
-                  })()}
-                </div>
-              );
-            })}
+            <button
+              onClick={() => setShowPassPrompt(false)}
+              style={{
+                marginTop: "10px",
+                padding: "6px 10px",
+                width: "100%",
+                background: "#ccc",
+                borderRadius: "6px",
+                cursor: "pointer"
+              }}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
 
-      {/* DRAFT BOARD */}
+      {/* DRAFT STATUS BANNER */}
+      <div
+        style={{
+          padding: "12px",
+          background: "#222",
+          color: "white",
+          marginBottom: "20px",
+          borderRadius: "6px",
+          textAlign: "center",
+          fontSize: "18px",
+          fontWeight: 600
+        }}
+      >
+        {draftState?.draftStatus === "inactive" && preCountdown === null && (
+          <div>
+            Draft – Inactive
+            {isCommissioner && (
+              <button
+                onClick={() => fetch("/api/startDraft", { method: "POST" })}
+                style={{
+                  marginLeft: "15px",
+                  padding: "6px 12px",
+                  background: "#0070f3",
+                  color: "white",
+                  borderRadius: "6px",
+                  cursor: "pointer"
+                }}
+              >
+                Start Draft
+              </button>
+            )}
+          </div>
+        )}
+
+        {draftState?.draftStatus === "inactive" && preCountdown !== null && (
+          <div>Draft begins in {preCountdown}…</div>
+        )}
+
+        {draftState?.draftStatus === "active" && <div>Draft – Active</div>}
+
+        {draftState?.draftStatus === "completed" && (
+          <div>Draft – Completed</div>
+        )}
+      </div>
+
+      {/* ⭐ PICK CLOCK */}
+      {!draftComplete &&
+        timeLeft !== null &&
+        draftState?.draftStatus === "active" && (
+          <div
+            style={{
+              padding: "12px",
+              marginBottom: "20px",
+              borderRadius: "6px",
+              textAlign: "center",
+              fontWeight: 700,
+              fontSize: "20px",
+              background:
+                timeLeft <= settings.warningSeconds ? "#ffe0e0" : "#e8f4ff",
+              border:
+                timeLeft <= settings.warningSeconds
+                  ? "2px solid #ff6b6b"
+                  : "2px solid #aacbff"
+            }}
+          >
+            Pick Clock: {timeLeft}s
+          </div>
+        )}
+
+      {/* UPCOMING PICKS STRIP (ONLY WHEN ACTIVE) */}
+      {draftState?.draftStatus === "active" &&
+        !draftComplete &&
+        draftState && (
+          <div
+            style={{
+              marginBottom: "20px",
+              padding: "12px",
+              background: "#f0f7ff",
+              border: "1px solid #cce0ff",
+              borderRadius: "6px"
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: "8px" }}>
+              Upcoming Picks
+            </div>
+
+            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+              {nextPicks.map((np, idx) => {
+                const owner = owners.find((o) => o.id === np.ownerId);
+
+                return (
+                  <div
+                    key={np.pickNumber}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "4px",
+                      background: idx === 0 ? "#d4f8d4" : "#fff",
+                      border:
+                        idx === 0
+                          ? "1px solid #8cd98c"
+                          : "1px solid #ddd",
+                      fontWeight: idx === 0 ? 700 : 500
+                    }}
+                  >
+                    {idx === 0 ? "On the Clock: " : ""}
+                    {(() => {
+                      const ownersPerRound = owners.length;
+                      const overall = np.pickNumber;
+                      const round = Math.ceil(overall / ownersPerRound);
+                      const ownerIdForPick = getOwnerForPick(overall)!;
+                      const ownerIndexInRound = owners.findIndex(
+                        (o) => o.id === ownerIdForPick
+                      );
+
+                      const pickInRound = isSnake
+                        ? round % 2 === 1
+                          ? ownerIndexInRound + 1
+                          : ownersPerRound - ownerIndexInRound
+                        : ownerIndexInRound + 1;
+
+                      return `${owner?.name} - ${round}.${pickInRound} (#${overall})`;
+                    })()}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+            {/* DRAFT BOARD */}
       <table
         style={{
           width: "100%",
+          maxWidth: "1000px",
+          margin: "0 auto",
           borderCollapse: "collapse",
           textAlign: "center",
           marginBottom: "30px"
@@ -244,7 +523,6 @@ export default function DraftClient({
                 padding: "8px"
               }}
             ></th>
-
             {owners.map((owner) => (
               <th
                 key={owner.id}
@@ -281,21 +559,15 @@ export default function DraftClient({
 
               {owners.map((owner) => {
                 const pick = grid[round][owner.id];
-                const ownerIndex = owners.findIndex(
-                  (o) => o.id === owner.id
-                );
-
+                const ownerIndex = owners.findIndex((o) => o.id === owner.id);
                 const ownersPerRound = owners.length;
 
-                // Compute overall pick number
                 let overallPickNumber: number;
 
                 if (!isSnake) {
-                  // Linear draft
                   overallPickNumber =
                     (round - 1) * ownersPerRound + (ownerIndex + 1);
                 } else {
-                  // Snake draft
                   overallPickNumber =
                     round % 2 === 1
                       ? (round - 1) * ownersPerRound + (ownerIndex + 1)
@@ -321,7 +593,6 @@ export default function DraftClient({
                     }}
                   >
                     {pick ? (
-                      // Drafted cell
                       <div
                         style={{
                           display: "flex",
@@ -347,22 +618,19 @@ export default function DraftClient({
                             fontWeight: 600,
                             fontSize: "16px",
                             textAlign: "left",
-                            lineHeight: 1.1,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
+                            lineHeight: 1.2,
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
                             maxWidth: "100%"
                           }}
                         >
-                          {pick.mlbTeam.name}
+                          {getShortTeamName(pick.mlbTeam.name)}
                         </div>
                       </div>
                     ) : (
-                      // Empty cell — show Round.Pick
                       <div style={{ fontSize: "14px", color: "#555" }}>
                         {(() => {
                           const indexInRound = ownerIndex;
-
                           const pickInRound = !isSnake
                             ? indexInRound + 1
                             : round % 2 === 1
@@ -420,7 +688,7 @@ export default function DraftClient({
 
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <div style={{ fontWeight: 600, fontSize: "15px" }}>
-                  {team.name}
+                  {getShortTeamName(team.name)}
                 </div>
                 <div style={{ color: "#666", fontSize: "13px" }}>
                   {team.division}
@@ -445,3 +713,4 @@ export default function DraftClient({
     </div>
   );
 }
+

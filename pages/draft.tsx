@@ -31,6 +31,8 @@ type Settings = {
   draftType: string;   // "snake" or "linear"
   rounds: number;
   commissionerPassword: string;
+  pickClockSeconds: number;
+  warningSeconds: number;
 };
 
 type DraftPageProps = {
@@ -86,8 +88,8 @@ export const getServerSideProps: GetServerSideProps<DraftPageProps> = async () =
 
 export default function DraftPage({ owners, teams, picks, settings }: DraftPageProps) {
   return (
-    <div style={{ padding: "20px" }}>
-      <h1 style={{ marginBottom: "20px" }}>Draft Board</h1>
+    <div style={{ padding: "0px" }}>
+      <h1 style={{ marginBottom: "10px" }}>Draft Board</h1>
 
       {/* ⭐ Pass settings into DraftClient */}
       <DraftClient owners={owners} teams={teams} picks={picks} settings={settings} />
